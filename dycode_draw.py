@@ -21,8 +21,8 @@ DISC_RING = 0.0787
 THICK = 0.0116
 THICK0 = 0.0231   # 最外环（格式环）更粗：官方 432px 实测约 10px
 MARK_R = 0.430
-BADGE_R = 0.436    # 右上角 logo 中心半径（按样图实测）
-BADGE_OR = 0.0972  # 右上角 logo 半径（约为定位环的 2 倍）
+BADGE_R = 0.434    # 右上角 logo 中心半径（按样图实测）
+BADGE_OR = 0.056  # 右上角 logo 半径（约为定位环的 2 倍）
 MARK_OR = 0.048
 MARKER_ANGLES = (45.0, 135.0, 225.0)
 BADGE_ANGLE = 315.0
@@ -63,7 +63,7 @@ def render(rings, size=600, dark="#161823", light="#ffffff", transparent=False,
             a1 = (j + 1 - gap / 2) * step
             j += 1
             d.arc(box, a0, a1, fill=col, width=th_k)
-            for a in (a0, a1):
+            for a in ((a0, a1) if th_k <= max(2, int(round(0.014 * S))) else ()):
                 cx = c + r * math.cos(math.radians(a))
                 cy = c + r * math.sin(math.radians(a))
                 rr = th_k / 2.0

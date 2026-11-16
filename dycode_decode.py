@@ -239,10 +239,9 @@ def _sample_all_rotations(ink, cx, cy, r):
     """一次采样 120 个旋转位姿：返回 (120, 120) 的 0/1 矩阵 [rot, module]"""
     h, w = ink.shape
     js = np.arange(N_MOD)
-    rots = np.arange(N_MOD)
     out = np.zeros((N_MOD, N_MOD), dtype=np.uint8)
     th0 = (js + 0.5) * 2 * math.pi / N_MOD
-    for rot in rots:
+    for rot in range(N_MOD):
         th = th0 + rot * 2 * math.pi / N_MOD
         xs = cx + r * np.cos(th)
         ys = cy + r * np.sin(th)
