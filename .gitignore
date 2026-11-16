@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# PyInstaller
+/build/
+/dist/
+*.spec
+
+# 测试/中间产物图片（不纳入版本库）
+q_*.png
+z_*.png
+t_*.png
+m2_*.png
+sw_*.png
+fx_*.png
+ss_*.png
+cmp_*.png
+cc_*.png
+x_*.png
+mine*.png
+badge_new.png
+fgui.png
+nologo.png
+off2.png
+official_test.png
+zz.png
+exe_*.png
+final_*.png
+nope.png
+
+# 运行数据目录
+数据/
+
+# 本地备份的旧版 exe
+葵花码工具_旧版备份.exe
+

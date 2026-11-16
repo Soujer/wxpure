@@ -279,6 +279,16 @@ def make_handler(dec, enc, max_bytes=53, store=None):
                     "encoder": bool(getattr(enc, "ok", False)),
                     "encode_max_bytes": max_bytes,
                 })
+            if p == "/dy":
+                q = parse_qs(u.query)
+                text = unquote(q.get("text", [""])[0]) or unquote(q.get("content", [""])[0])
+                if not text:
+                    return self._json(400, {"ok": False, "error": "缺少 text"})
+                try:
+                    size = int(q.get("size", ["600"])[0])
+                except Exception:
+                    size = 600
+                return self._do_dy(text, size)
             if p == "/encode":
                 q = parse_qs(u.query)
                 content = unquote(q.get("content", [""])[0])
@@ -314,6 +324,10 @@ def make_handler(dec, enc, max_bytes=53, store=None):
             try:
                 if p == "/decode":
                     return self._do_decode(body)
+                if p == "/dy":
+                    return self._do_dy_body(body)
+                if p == "/dy/decode":
+                    return self._do_dy_decode(body)
                 if p == "/encode":
                     return self._do_encode(body)
             except Exception as e:
@@ -321,6 +335,45 @@ def make_handler(dec, enc, max_bytes=53, store=None):
                           % (type(e).__name__, e, traceback.format_exc()))
                 return self._json(500, {"ok": False, "error": "服务器内部错误"})
             return self._json(404, {"ok": False, "error": "not found"})
+
+        def _do_dy_decode(self, body):
+            """图片二进制 -> JSON 识别结果"""
+            try:
+                import dycode_decode
+                r = dycode_decode.decode(body)
+            except Exception as e:
+                return self._json(400, {"ok": False, "error": str(e)})
+            if not r:
+                return self._json(200, {"ok": False, "text": "", "error": "未识别到抖音码"})
+            return self._json(200, {"ok": True, "text": r["text"],
+                                    "format_code": r["format_code"],
+                                    "ring_count": r["ring_count"],
+                                    "mask_id": r["mask_id"]})
+
+        def _do_dy(self, text, size):
+            """生成抖音圆码 PNG"""
+            try:
+                import io
+                import dycode_core
+                import dycode_draw
+                r = dycode_core.encode(text)
+                img = dycode_draw.render(r["rings"], size=max(200, min(2000, int(size))))
+                buf = io.BytesIO()
+                img.save(buf, "PNG")
+                return self._send(200, buf.getvalue(), "image/png")
+            except Exception as e:
+                _safe_log("dy 生成失败: %s: %s" % (type(e).__name__, e))
+                return self._json(400, {"ok": False, "error": str(e)})
+
+        def _do_dy_body(self, body):
+            try:
+                d = json.loads(body.decode("utf-8"))
+            except Exception:
+                return self._json(400, {"ok": False, "error": "请求体需为 JSON"})
+            text = d.get("text") or d.get("content") or ""
+            if not text:
+                return self._json(400, {"ok": False, "error": "缺少 text"})
+            return self._do_dy(text, int(d.get("size", 600)))
 
         def _do_decode(self, body):
             raw_ct = self.headers.get("Content-Type") or ""

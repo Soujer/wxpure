@@ -245,6 +245,8 @@ class App:
         self.tab_http = tk.Frame(nb, bg=C_BG)
         nb.add(self.tab_dec, text="   解  码   ")
         nb.add(self.tab_enc, text="   编  码   ")
+        self.tab_dy = tk.Frame(nb, bg=C_BG)
+        nb.add(self.tab_dy, text="  抖音圆码  ")
         self.tab_set = tk.Frame(nb, bg=C_BG)
         nb.add(self.tab_http, text="   HTTP 服 务   ")
         nb.add(self.tab_set, text="   设  置   ")
@@ -253,6 +255,12 @@ class App:
         self._build_encode()
         self._build_http()
         self._build_settings()
+        try:
+            import dycode_ui
+            dycode_ui.build(self, self.tab_dy, C_BG=C_BG, C_GREY=C_GREY, C_FG="#222222")
+        except Exception as _e:
+            tk.Label(self.tab_dy, text="抖音圆码模块加载失败：%s" % _e,
+                     bg=C_BG, fg="#c0392b").pack(pady=40)
         self._update_count()
         self.drop = DropTarget(root, self._on_drop)
         threading.Thread(target=self._boot, daemon=True).start()
@@ -463,8 +471,20 @@ class App:
                     hits += 1
                 self.store.save_decode(fn, got)
             else:
-                self.tree.insert("", "end", values=(base, "-", "-", "未识别到码"))
-                self.store.save_decode(fn, [("-", "未识别到码", "")])
+                dy = None
+                try:
+                    import dycode_decode
+                    dy = dycode_decode.decode(fn)
+                except Exception as e:
+                    self._log("抖音码解码异常 %s: %s" % (base, e))
+                if dy:
+                    self.tree.insert("", "end",
+                                     values=(base, "抖音码", "抖音码", dy["text"]))
+                    hits += 1
+                    self.store.save_decode(fn, [("抖音码", dy["text"], "")])
+                else:
+                    self.tree.insert("", "end", values=(base, "-", "-", "未识别到码"))
+                    self.store.save_decode(fn, [("-", "未识别到码", "")])
         if first is not None:
             self._show(first, self.dec_preview)
         self.root.title("葵花码工具箱  ·  本次识别 %d 个码" % hits)
@@ -1131,6 +1151,12 @@ def main():
     argv = sys.argv[1:]
     if "--autostart" in argv:
         return _cli_autostart(argv)
+    if argv and argv[0] in ("dy", "dyencode", "dycode"):
+        import dycode_ui
+        return dycode_ui.cli(argv[1:])
+    if argv and argv[0] in ("dy-decode", "dydecode", "dyd"):
+        import dycode_ui
+        return dycode_ui.cli_decode(argv[1:])
     autoserve = "--serve" in argv
     port = 8765
     for i, a in enumerate(argv):

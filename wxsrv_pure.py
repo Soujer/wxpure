@@ -61,8 +61,15 @@ def make_handler():
                     '    pos : center(中间,默认) / br(右下角) / none(不加)\n'
                     'POST /decode  请求体为图片二进制         -> JSON {"ok":true,"text":"..."}\n'
                     'GET  /decode?file=本地路径               -> JSON\n'
+                    'GET  /dy?text=内容&size=600            -> 抖音圆码 PNG\n'
+                    'POST /dy  {"text":"...","size":600}      -> 抖音圆码 PNG\n'
                 )
                 self._send(200, "text/plain; charset=utf-8", txt.encode("utf-8"))
+                return
+            if u.path == "/dy":
+                text = (q.get("text") or q.get("content") or [""])[0]
+                size = int((q.get("size") or ["600"])[0])
+                self._do_dy(text, size)
                 return
             if u.path == "/encode":
                 text = (q.get("text") or q.get("content") or [""])[0]
@@ -96,7 +103,31 @@ def make_handler():
             if u.path == "/decode":
                 self._do_decode_bytes(body)
                 return
+            if u.path == "/dy":
+                try:
+                    d = json.loads(body.decode("utf-8"))
+                except Exception:
+                    self._json(400, {"ok": False, "error": "请求体需为 JSON"})
+                    return
+                self._do_dy(d.get("text", ""), int(d.get("size", 600)))
+                return
             self._json(404, {"ok": False, "error": "未知路径"})
+
+        def _do_dy(self, text, size):
+            if not text:
+                self._json(400, {"ok": False, "error": "内容为空"})
+                return
+            try:
+                import io
+                import dycode_core
+                import dycode_draw
+                r = dycode_core.encode(text)
+                img = dycode_draw.render(r["rings"], size=max(200, min(2000, size)))
+                buf = io.BytesIO()
+                img.save(buf, "PNG")
+                self._send(200, "image/png", buf.getvalue())
+            except Exception as ex:
+                self._json(400, {"ok": False, "error": str(ex)})
 
         def _do_encode(self, text, size, logo_url="", pos="center"):
             if not text:
